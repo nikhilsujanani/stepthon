@@ -17,3 +17,17 @@ export function useMyMembership() {
     queryFn: () => teamService.myMembership(event!.id, session!.user.id),
   });
 }
+
+export function useEventAccess() {
+  const { session } = useAuth();
+  const { data: event } = useActiveEvent();
+  return useQuery({
+    queryKey: event ? qk.eventAccess(event.id) : ['event-access', 'none'],
+    enabled: !!event && !!session,
+    queryFn: async () => {
+      const required = await eventService.requiresAccess(event!.id);
+      if (!required) return true;
+      return eventService.hasAccess(event!.id, session!.user.id);
+    },
+  });
+}

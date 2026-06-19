@@ -21,7 +21,7 @@ import { adminService } from '@/services/admin.service';
 import { eventService } from '@/services/event.service';
 import { useActiveEvent } from '@/hooks/useActiveEvent';
 import { useAuth } from '@/hooks/useAuth';
-import { eventSchema, type EventInput } from '@/lib/validation';
+import { eventCreateSchema, eventUpdateSchema, type EventInput } from '@/lib/validation';
 import { MAX_STEPS_PER_DAY, qk } from '@/lib/constants';
 import { fmtCompact, fmtSteps } from '@/lib/format';
 import type { Event } from '@/types';
@@ -29,10 +29,20 @@ import type { Event } from '@/types';
 // ── helpers ────────────────────────────────────────────────────────────────
 
 function friendlyError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
+  let msg = '';
+  if (err instanceof Error) {
+    msg = err.message;
+  } else if (err && typeof err === 'object') {
+    const e = err as Record<string, unknown>;
+    msg = String(e.message ?? e.details ?? e.hint ?? JSON.stringify(err));
+  } else {
+    msg = String(err);
+  }
   if (msg.includes('events_one_active_idx'))
     return 'Another event is already active — close it first.';
-  return msg;
+  if (msg.includes('events_join_code_unique_idx'))
+    return 'That join code is already in use — pick another.';
+  return msg || 'An unexpected error occurred.';
 }
 
 function toEventInput(ev: Event): EventInput {
@@ -43,6 +53,7 @@ function toEventInput(ev: Event): EventInput {
     end_date: ev.end_date,
     max_steps_per_day: ev.max_steps_per_day,
     goal_steps: ev.goal_steps ?? undefined,
+    join_code: ev.join_code ?? '',
   };
 }
 
@@ -81,7 +92,7 @@ function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: Eve
     handleSubmit,
     formState: { errors },
   } = useForm<EventInput>({
-    resolver: zodResolver(eventSchema),
+    resolver: zodResolver(isEditing ? eventUpdateSchema : eventCreateSchema),
     defaultValues: defaultValues ?? {
       name: '',
       description: '',
@@ -158,6 +169,40 @@ function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: Eve
         />
         {errors.goal_steps && (
           <p className="text-xs text-destructive">{errors.goal_steps.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ef-join-code">
+          Join Code{' '}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Input
+          id="ef-join-code"
+          placeholder="e.g. STEPATHON2026"
+          autoComplete="off"
+          {...register('join_code')}
+        />
+        {errors.join_code && (
+          <p className="text-xs text-destructive">{errors.join_code.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ef-password">
+          Event Password{' '}
+          <span className="font-normal text-muted-foreground">
+            {isEditing ? '(leave blank to keep current)' : '(required with join code)'}
+          </span>
+        </Label>
+        <Input
+          id="ef-password"
+          type="password"
+          autoComplete="new-password"
+          {...register('event_password')}
+        />
+        {errors.event_password && (
+          <p className="text-xs text-destructive">{errors.event_password.message}</p>
         )}
       </div>
 

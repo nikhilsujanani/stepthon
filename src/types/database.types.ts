@@ -27,7 +27,11 @@ export interface Database {
       events: Row<{
         id: string; name: string; description: string; start_date: string; end_date: string;
         status: EventStatus; max_steps_per_day: number; goal_steps: number | null;
+        join_code: string | null; password_hash: string | null;
         created_by: string; created_at: string; updated_at: string;
+      }>;
+      event_access: Row<{
+        event_id: string; user_id: string; granted_at: string;
       }>;
       teams: Row<{
         id: string; event_id: string; name: string; captain_id: string; created_at: string;
@@ -38,7 +42,8 @@ export interface Database {
       }>;
       daily_steps: Row<{
         id: string; user_id: string; team_id: string; event_id: string;
-        step_date: string; steps: number; created_at: string; updated_at: string;
+        step_date: string; steps: number; proof_url: string | null;
+        created_at: string; updated_at: string;
       }>;
       badges: Row<{
         id: string; code: string; name: string; description: string; icon: string;
@@ -94,6 +99,9 @@ export interface Database {
       current_streak: { Args: { p_user_id: string; p_event_id: string }; Returns: number };
       capture_leaderboard_snapshot: { Args: { p_event_id: string }; Returns: undefined };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      set_event_password: { Args: { p_event_id: string; p_password: string }; Returns: undefined };
+      verify_event_access: { Args: { p_join_code: string; p_password: string }; Returns: undefined };
+      event_requires_access: { Args: { p_event_id: string }; Returns: boolean };
     };
     Enums: {
       app_role: AppRole; team_role: TeamRole; event_status: EventStatus;

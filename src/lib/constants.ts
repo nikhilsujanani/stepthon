@@ -7,6 +7,7 @@ export const qk = {
   me: ['me'] as const,
   activeEvent: ['event', 'active'] as const,
   myMembership: (eventId: string) => ['membership', eventId] as const,
+  eventAccess: (eventId: string) => ['event-access', eventId] as const,
   teamLeaderboard: (eventId: string) => ['leaderboard', 'team', eventId] as const,
   individualLeaderboard: (eventId: string) => ['leaderboard', 'individual', eventId] as const,
   team: (teamId: string) => ['team', teamId] as const,
