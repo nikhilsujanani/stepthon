@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Flame, Footprints, LogOut, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export function ProfilePage() {
   const { session, profile, isAdmin, signOut } = useAuth();
   const { data: event } = useActiveEvent();
   const userId = session!.user.id;
+  const qc = useQueryClient();
 
   const { data: badges = [] } = useQuery({
     queryKey: event ? qk.myBadges(event.id) : ['badges', 'none'],
@@ -42,6 +43,13 @@ export function ProfilePage() {
 
   const total = steps.reduce((s, d) => s + d.steps, 0);
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: qk.notifications,
+    queryFn: () => notificationService.list(userId),
+  });
+
+  const unread = notifications.filter((n) => !n.read);
+
   return (
     <div className="space-y-4 py-2">
       <header className="flex items-center gap-3">
@@ -62,6 +70,48 @@ export function ProfilePage() {
         <StatCard label="Current Streak" value={`${streak} 🔥`} icon={Flame} />
         <StatCard label="Total Steps" value={fmtSteps(total)} icon={Footprints} />
       </div>
+
+      <Card>
+        <CardContent className="p-4">
+          <h2 className="mb-3 font-semibold">Notifications</h2>
+          <div className="divide-y">
+            {notifications.length === 0 && (
+              <p className="py-2 text-sm text-muted-foreground">No notifications yet.</p>
+            )}
+            {notifications.slice(0, 10).map((n) => (
+              <div key={n.id} className="flex items-start justify-between gap-2 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm ${n.read ? 'text-muted-foreground' : 'font-semibold'}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{n.body}</p>
+                  {(n.metadata as { kind?: string })?.kind === 'team_access_request' && (
+                    <Link to="/team" className="mt-1 inline-block text-xs text-primary">
+                      Review on Team page
+                    </Link>
+                  )}
+                </div>
+                {!n.read && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0 text-xs"
+                    onClick={async () => {
+                      await notificationService.markRead(n.id);
+                      qc.invalidateQueries({ queryKey: qk.notifications });
+                    }}
+                  >
+                    Mark read
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          {unread.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">{unread.length} unread</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-4">

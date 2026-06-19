@@ -15,6 +15,24 @@ export type EventParticipationStatus = {
 
 export type Team = T['teams']['Row'];
 export type TeamMember = T['team_members']['Row'];
+export type TeamJoinRequest = T['team_join_requests']['Row'];
+
+export interface PendingTeamRequest {
+  id: string;
+  requester_id: string;
+  full_name: string;
+  email: string;
+  message: string;
+  created_at: string;
+}
+
+export interface MyTeamJoinRequest {
+  id: string;
+  team_id: string;
+  team_name: string;
+  status: TeamJoinRequest['status'];
+  created_at: string;
+}
 export type DailyStep = T['daily_steps']['Row'];
 export type Badge = T['badges']['Row'];
 export type UserBadge = T['user_badges']['Row'];

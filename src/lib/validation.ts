@@ -21,6 +21,11 @@ export const createTeamSchema = z.object({
 });
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
 
+export const teamAccessRequestSchema = z.object({
+  message: z.string().trim().max(500, 'Too long').optional().or(z.literal('')),
+});
+export type TeamAccessRequestInput = z.infer<typeof teamAccessRequestSchema>;
+
 export const eventSchema = z
   .object({
     name: z.string().trim().min(3).max(80),

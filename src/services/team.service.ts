@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Team, TeamMember, TeamMemberCardData, CatchNextTeam } from '@/types';
+import type { Team, TeamMember, TeamMemberCardData, CatchNextTeam, PendingTeamRequest, MyTeamJoinRequest } from '@/types';
 
 export const teamService = {
   /** Create a team in the active event; creator becomes captain + first member. */
@@ -79,5 +79,34 @@ export const teamService = {
     const { data, error } = await supabase.rpc('catch_next_team', { p_team_id: teamId });
     if (error) throw error;
     return data?.[0] ?? null;
+  },
+
+  async requestAccess(teamId: string, message = ''): Promise<string> {
+    const { data, error } = await supabase.rpc('request_team_access', {
+      p_team_id: teamId,
+      p_message: message,
+    });
+    if (error) throw error;
+    return data as string;
+  },
+
+  async pendingRequests(teamId: string): Promise<PendingTeamRequest[]> {
+    const { data, error } = await supabase.rpc('list_pending_team_requests', { p_team_id: teamId });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  async resolveRequest(requestId: string, approve: boolean): Promise<void> {
+    const { error } = await supabase.rpc('resolve_team_access_request', {
+      p_request_id: requestId,
+      p_approve: approve,
+    });
+    if (error) throw error;
+  },
+
+  async myPendingRequests(eventId: string): Promise<MyTeamJoinRequest[]> {
+    const { data, error } = await supabase.rpc('my_team_join_requests', { p_event_id: eventId });
+    if (error) throw error;
+    return (data ?? []) as MyTeamJoinRequest[];
   },
 };

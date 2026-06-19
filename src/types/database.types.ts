@@ -41,6 +41,11 @@ export interface Database {
         id: string; team_id: string; user_id: string; event_id: string;
         role: TeamRole; joined_at: string;
       }>;
+      team_join_requests: Row<{
+        id: string; team_id: string; event_id: string; requester_id: string;
+        message: string; status: 'pending' | 'approved' | 'rejected';
+        created_at: string; resolved_at: string | null; resolved_by: string | null;
+      }>;
       daily_steps: Row<{
         id: string; user_id: string; team_id: string; event_id: string;
         step_date: string; steps: number; proof_url: string | null;
@@ -105,6 +110,16 @@ export interface Database {
       event_requires_access: { Args: { p_event_id: string }; Returns: boolean };
       event_access_configured: { Args: { p_event_id: string }; Returns: boolean };
       get_event_participation_status: { Args: { p_event_id: string }; Returns: Record<string, unknown> };
+      request_team_access: { Args: { p_team_id: string; p_message?: string }; Returns: string };
+      resolve_team_access_request: { Args: { p_request_id: string; p_approve: boolean }; Returns: undefined };
+      list_pending_team_requests: {
+        Args: { p_team_id: string };
+        Returns: { id: string; requester_id: string; full_name: string; email: string; message: string; created_at: string }[];
+      };
+      my_team_join_requests: {
+        Args: { p_event_id: string };
+        Returns: { id: string; team_id: string; team_name: string; status: string; created_at: string }[];
+      };
     };
     Enums: {
       app_role: AppRole; team_role: TeamRole; event_status: EventStatus;
