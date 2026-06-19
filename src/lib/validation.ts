@@ -47,8 +47,12 @@ export const eventSchema = z
 export type EventInput = z.infer<typeof eventSchema>;
 
 export const eventCreateSchema = eventSchema.refine(
-  (v) => !v.join_code || !!v.event_password,
-  { message: 'Event password is required when a join code is set', path: ['event_password'] },
+  (v) => !!v.join_code && !!v.event_password,
+  { message: 'Join code and event password are required', path: ['event_password'] },
+);
+export const eventLegacySetupSchema = eventSchema.refine(
+  (v) => !!v.event_password,
+  { message: 'Event password is required to enable access protection', path: ['event_password'] },
 );
 export const eventUpdateSchema = eventSchema;
 

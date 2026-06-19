@@ -6,6 +6,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressCard } from '@/components/common/ProgressCard';
 import { CatchNextWidget } from '@/components/common/CatchNextWidget';
 import { ActivityCard } from '@/components/common/ActivityCard';
+import { EventParticipationGate } from '@/components/common/EventParticipationGate';
 import { useAuth } from '@/hooks/useAuth';
 import { useActiveEvent, useMyMembership } from '@/hooks/useActiveEvent';
 import { useTeamLeaderboard, useCatchNext } from '@/hooks/useLeaderboard';
@@ -36,6 +37,38 @@ export function HomePage() {
 
   if (!event) return <EmptyState />;
 
+  return (
+    <EventParticipationGate eventId={event.id}>
+      <HomeDashboard
+        event={event}
+        membership={membership}
+        teamLb={teamLb}
+        catchNext={catchNext}
+        todaySteps={todaySteps}
+        activity={activity}
+        profile={profile}
+      />
+    </EventParticipationGate>
+  );
+}
+
+function HomeDashboard({
+  event,
+  membership,
+  teamLb,
+  catchNext,
+  todaySteps,
+  activity,
+  profile,
+}: {
+  event: NonNullable<ReturnType<typeof useActiveEvent>['data']>;
+  membership: ReturnType<typeof useMyMembership>['data'];
+  teamLb: ReturnType<typeof useTeamLeaderboard>['data'];
+  catchNext: ReturnType<typeof useCatchNext>['data'];
+  todaySteps: number;
+  activity: Awaited<ReturnType<typeof activityService.forEvent>>;
+  profile: ReturnType<typeof useAuth>['profile'];
+}) {
   const myTeam = teamLb?.find((t) => t.row.team_id === membership?.team_id);
   const eventTotal = teamLb?.reduce((s, t) => s + t.row.total_steps, 0) ?? 0;
 

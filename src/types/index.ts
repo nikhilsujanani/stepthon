@@ -6,6 +6,13 @@ type V = Database['public']['Views'];
 export type UserProfile = T['users']['Row'];
 export type Event = Omit<T['events']['Row'], 'password_hash'>;
 export type EventAccess = T['event_access']['Row'];
+
+export type EventParticipationStatus = {
+  allowed: boolean;
+  reason: 'ok' | 'setup_required' | 'verification_required';
+  message: string | null;
+};
+
 export type Team = T['teams']['Row'];
 export type TeamMember = T['team_members']['Row'];
 export type DailyStep = T['daily_steps']['Row'];

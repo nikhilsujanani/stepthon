@@ -5,16 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Crown, Users, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { StatCard } from '@/components/common/StatCard';
 import { CatchNextWidget } from '@/components/common/CatchNextWidget';
 import { TeamMemberCard } from '@/components/team/TeamMemberCard';
+import { EventParticipationGate } from '@/components/common/EventParticipationGate';
 import { teamService } from '@/services/team.service';
-import { eventService } from '@/services/event.service';
-import { createTeamSchema, eventAccessSchema, type CreateTeamInput, type EventAccessInput } from '@/lib/validation';
+import { createTeamSchema, type CreateTeamInput } from '@/lib/validation';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveEvent, useMyMembership, useEventAccess } from '@/hooks/useActiveEvent';
+import { useActiveEvent, useMyMembership } from '@/hooks/useActiveEvent';
 import { useTeamLeaderboard, useCatchNext } from '@/hooks/useLeaderboard';
 import { qk } from '@/lib/constants';
 import { fmtSteps, rankSuffix } from '@/lib/format';
@@ -23,72 +21,17 @@ export function TeamPage() {
   const { session } = useAuth();
   const { data: event } = useActiveEvent();
   const { data: membership } = useMyMembership();
-  const { data: hasAccess, isLoading: accessLoading } = useEventAccess();
 
   if (!event) return <p className="py-10 text-center text-muted-foreground">No active event.</p>;
-  if (accessLoading) {
-    return (
-      <div className="grid h-24 place-items-center py-10">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  if (!membership && hasAccess === false) {
-    return <VerifyEventAccess eventId={event.id} />;
-  }
-  if (!membership) return <JoinOrCreate eventId={event.id} userId={session!.user.id} />;
-  return <MyTeam eventId={event.id} teamId={membership.team_id} />;
-}
-
-function VerifyEventAccess({ eventId }: { eventId: string }) {
-  const qc = useQueryClient();
-  const { register, handleSubmit, formState: { errors } } = useForm<EventAccessInput>({
-    resolver: zodResolver(eventAccessSchema),
-  });
-
-  const verify = useMutation({
-    mutationFn: (input: EventAccessInput) =>
-      eventService.verifyAccess(input.join_code, input.password),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.eventAccess(eventId) }),
-  });
-
-  const verifyError = verify.error
-    ? String((verify.error as { message?: string }).message ?? verify.error).includes('INVALID')
-      ? 'Invalid join code or password.'
-      : 'Could not verify access. Please try again.'
-    : null;
 
   return (
-    <div className="space-y-4 py-2">
-      <h1 className="text-xl font-bold">Enter Event Access</h1>
-      <p className="text-sm text-muted-foreground">
-        Enter the join code and password provided by your event organizer.
-      </p>
-      <Card>
-        <CardContent className="p-4">
-          <form onSubmit={handleSubmit((v) => verify.mutate(v))} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="va-join-code">Join Code</Label>
-              <Input id="va-join-code" autoComplete="off" {...register('join_code')} />
-              {errors.join_code && (
-                <p className="text-xs text-destructive">{errors.join_code.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="va-password">Event Password</Label>
-              <Input id="va-password" type="password" autoComplete="current-password" {...register('password')} />
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            {verifyError && <p className="text-xs text-destructive">{verifyError}</p>}
-            <Button type="submit" className="w-full" disabled={verify.isPending}>
-              {verify.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify Access'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <EventParticipationGate eventId={event.id}>
+      {!membership ? (
+        <JoinOrCreate eventId={event.id} userId={session!.user.id} />
+      ) : (
+        <MyTeam eventId={event.id} teamId={membership.team_id} />
+      )}
+    </EventParticipationGate>
   );
 }
 

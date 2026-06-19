@@ -18,16 +18,21 @@ export function useMyMembership() {
   });
 }
 
-export function useEventAccess() {
+export function useParticipationStatus() {
   const { session } = useAuth();
   const { data: event } = useActiveEvent();
   return useQuery({
-    queryKey: event ? qk.eventAccess(event.id) : ['event-access', 'none'],
+    queryKey: event ? qk.participationStatus(event.id) : ['participation', 'none'],
     enabled: !!event && !!session,
-    queryFn: async () => {
-      const required = await eventService.requiresAccess(event!.id);
-      if (!required) return true;
-      return eventService.hasAccess(event!.id, session!.user.id);
-    },
+    queryFn: () => eventService.getParticipationStatus(event!.id),
   });
+}
+
+/** @deprecated use useParticipationStatus */
+export function useEventAccess() {
+  const { data: status, ...rest } = useParticipationStatus();
+  return {
+    ...rest,
+    data: status?.allowed ?? false,
+  };
 }

@@ -21,7 +21,7 @@ import { adminService } from '@/services/admin.service';
 import { eventService } from '@/services/event.service';
 import { useActiveEvent } from '@/hooks/useActiveEvent';
 import { useAuth } from '@/hooks/useAuth';
-import { eventCreateSchema, eventUpdateSchema, type EventInput } from '@/lib/validation';
+import { eventCreateSchema, eventLegacySetupSchema, eventUpdateSchema, type EventInput } from '@/lib/validation';
 import { MAX_STEPS_PER_DAY, qk } from '@/lib/constants';
 import { fmtCompact, fmtSteps } from '@/lib/format';
 import type { Event } from '@/types';
@@ -81,18 +81,23 @@ function EventStatusBadge({ status }: { status: Event['status'] }) {
 interface EventFormProps {
   defaultValues?: EventInput;
   isEditing: boolean;
+  requiresAdminSetup?: boolean;
   onSubmit: (data: EventInput) => void;
   isPending: boolean;
   error: string | null;
 }
 
-function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: EventFormProps) {
+function EventForm({ defaultValues, isEditing, requiresAdminSetup, onSubmit, isPending, error }: EventFormProps) {
+  const schema = isEditing
+    ? (requiresAdminSetup ? eventLegacySetupSchema : eventUpdateSchema)
+    : eventCreateSchema;
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<EventInput>({
-    resolver: zodResolver(isEditing ? eventUpdateSchema : eventCreateSchema),
+    resolver: zodResolver(schema),
     defaultValues: defaultValues ?? {
       name: '',
       description: '',
@@ -104,6 +109,12 @@ function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: Eve
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {requiresAdminSetup && (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          This event was created before access protection was enabled. Please configure a Join
+          Code and Password before participants can continue.
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="ef-name">Event Name *</Label>
         <Input id="ef-name" {...register('name')} placeholder="Stepathon 2026" />
@@ -175,7 +186,9 @@ function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: Eve
       <div className="space-y-1.5">
         <Label htmlFor="ef-join-code">
           Join Code{' '}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          <span className="font-normal text-muted-foreground">
+            {isEditing ? '' : '(required)'}
+          </span>
         </Label>
         <Input
           id="ef-join-code"
@@ -192,7 +205,11 @@ function EventForm({ defaultValues, isEditing, onSubmit, isPending, error }: Eve
         <Label htmlFor="ef-password">
           Event Password{' '}
           <span className="font-normal text-muted-foreground">
-            {isEditing ? '(leave blank to keep current)' : '(required with join code)'}
+            {requiresAdminSetup
+              ? '(required to enable access)'
+              : isEditing
+              ? '(leave blank to keep current)'
+              : '(required)'}
           </span>
         </Label>
         <Input
@@ -238,6 +255,7 @@ function EventsTab() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: qk.events });
     queryClient.invalidateQueries({ queryKey: qk.activeEvent });
+    queryClient.invalidateQueries({ queryKey: ['participation'] });
   };
 
   const createMutation = useMutation({
@@ -319,6 +337,11 @@ function EventsTab() {
                     {ev.description}
                   </p>
                 )}
+                {ev.requires_admin_setup && (
+                  <p className="mt-2 rounded-lg bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                    Access protection setup required.
+                  </p>
+                )}
               </div>
 
               <div className="flex shrink-0 flex-col gap-1.5">
@@ -368,11 +391,18 @@ function EventsTab() {
                 New events start as <strong>draft</strong> — activate when ready to go live.
               </DialogDescription>
             )}
+            {editing?.requires_admin_setup && (
+              <DialogDescription>
+                This event was created before access protection was enabled. Please configure a
+                Join Code and Password before participants can continue.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <EventForm
             key={editing?.id ?? 'new'}
             defaultValues={editing ? toEventInput(editing) : undefined}
             isEditing={!!editing}
+            requiresAdminSetup={editing?.requires_admin_setup}
             onSubmit={(data) => {
               if (editing) {
                 updateMutation.mutate({ id: editing.id, patch: data });

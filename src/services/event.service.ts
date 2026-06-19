@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase';
-import type { Event } from '@/types';
+import type { Event, EventParticipationStatus } from '@/types';
 import type { EventInput } from '@/lib/validation';
 
 const EVENT_COLUMNS =
-  'id, name, description, start_date, end_date, status, max_steps_per_day, goal_steps, join_code, created_by, created_at, updated_at' as const;
+  'id, name, description, start_date, end_date, status, max_steps_per_day, goal_steps, join_code, requires_admin_setup, created_by, created_at, updated_at' as const;
 
 function toEventPayload(input: Partial<EventInput>): Partial<Event> & { join_code?: string | null } {
   const { event_password: _password, join_code, ...rest } = input;
@@ -12,6 +12,16 @@ function toEventPayload(input: Partial<EventInput>): Partial<Event> & { join_cod
     payload.join_code = join_code || null;
   }
   return payload;
+}
+
+function parseParticipationStatus(data: unknown): EventParticipationStatus {
+  const row = data as Record<string, unknown>;
+  const reason = row.reason as EventParticipationStatus['reason'];
+  return {
+    allowed: !!row.allowed,
+    reason: reason ?? 'verification_required',
+    message: typeof row.message === 'string' ? row.message : null,
+  };
 }
 
 export const eventService = {
@@ -29,8 +39,16 @@ export const eventService = {
     return data ?? [];
   },
 
+  async getParticipationStatus(eventId: string): Promise<EventParticipationStatus> {
+    const { data, error } = await supabase.rpc('get_event_participation_status', {
+      p_event_id: eventId,
+    });
+    if (error) throw error;
+    return parseParticipationStatus(data);
+  },
+
   async requiresAccess(eventId: string): Promise<boolean> {
-    const { data, error } = await supabase.rpc('event_requires_access', { p_event_id: eventId });
+    const { data, error } = await supabase.rpc('event_access_configured', { p_event_id: eventId });
     if (error) throw error;
     return !!data;
   },

@@ -1,5 +1,6 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { LeaderboardCard } from '@/components/leaderboard/LeaderboardCard';
+import { EventParticipationGate } from '@/components/common/EventParticipationGate';
 import { fmtSteps } from '@/lib/format';
 import { useActiveEvent, useMyMembership } from '@/hooks/useActiveEvent';
 import { useTeamLeaderboard, useIndividualLeaderboard } from '@/hooks/useLeaderboard';
@@ -12,11 +13,16 @@ export function LeaderboardPage() {
   const { data: teams = [], isLoading: tLoading } = useTeamLeaderboard(event?.id);
   const { data: people = [], isLoading: iLoading } = useIndividualLeaderboard(event?.id);
 
-  return (
-    <div className="space-y-4 py-2">
-      <h1 className="text-xl font-bold">Leaderboard</h1>
+  if (!event) {
+    return <p className="py-10 text-center text-muted-foreground">No active event.</p>;
+  }
 
-      <Tabs defaultValue="teams">
+  return (
+    <EventParticipationGate eventId={event.id}>
+      <div className="space-y-4 py-2">
+        <h1 className="text-xl font-bold">Leaderboard</h1>
+
+        <Tabs defaultValue="teams">
         <TabsList>
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="individuals">Individuals</TabsTrigger>
@@ -53,7 +59,8 @@ export function LeaderboardPage() {
           ))}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </EventParticipationGate>
   );
 }
 

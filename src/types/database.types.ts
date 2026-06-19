@@ -28,6 +28,7 @@ export interface Database {
         id: string; name: string; description: string; start_date: string; end_date: string;
         status: EventStatus; max_steps_per_day: number; goal_steps: number | null;
         join_code: string | null; password_hash: string | null;
+        requires_admin_setup: boolean;
         created_by: string; created_at: string; updated_at: string;
       }>;
       event_access: Row<{
@@ -102,6 +103,8 @@ export interface Database {
       set_event_password: { Args: { p_event_id: string; p_password: string }; Returns: undefined };
       verify_event_access: { Args: { p_join_code: string; p_password: string }; Returns: undefined };
       event_requires_access: { Args: { p_event_id: string }; Returns: boolean };
+      event_access_configured: { Args: { p_event_id: string }; Returns: boolean };
+      get_event_participation_status: { Args: { p_event_id: string }; Returns: Record<string, unknown> };
     };
     Enums: {
       app_role: AppRole; team_role: TeamRole; event_status: EventStatus;
